@@ -16,10 +16,10 @@
 package io.atomix.rest.resources;
 
 import com.google.common.util.concurrent.MoreExecutors;
-import io.atomix.cluster.NodeId;
+import io.atomix.cluster.MemberId;
 import io.atomix.cluster.messaging.ClusterMessagingService;
-import io.atomix.rest.utils.EventLog;
-import io.atomix.rest.utils.EventManager;
+import io.atomix.core.utils.EventLog;
+import io.atomix.core.utils.EventManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  */
 @Path("/v1/messages")
 public class MessagesResource {
-  private static final Logger LOGGER = LoggerFactory.getLogger(EventsResource.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(MessagesResource.class);
   private static final int UUID_STRING_LENGTH = UUID.randomUUID().toString().length();
 
   /**
@@ -68,7 +68,7 @@ public class MessagesResource {
   @Path("/{subject}/{node}")
   @Consumes(MediaType.TEXT_PLAIN)
   public void send(@PathParam("subject") String subject, @PathParam("node") String node, @Context ClusterMessagingService communicationService, String body, @Suspended AsyncResponse response) {
-    communicationService.unicast(subject, body, NodeId.from(node)).whenComplete((result, error) -> {
+    communicationService.unicast(subject, body, MemberId.from(node)).whenComplete((result, error) -> {
       if (error == null) {
         response.resume(Response.ok().build());
       } else {
@@ -130,6 +130,7 @@ public class MessagesResource {
 
   @POST
   @Path("/{subject}/subscribers")
+  @Consumes(MediaType.TEXT_PLAIN)
   @Produces(MediaType.TEXT_PLAIN)
   public void subscribe(@PathParam("subject") String subject, @Context ClusterMessagingService communicationService, @Context EventManager events, @Suspended AsyncResponse response) {
     String id = UUID.randomUUID().toString();

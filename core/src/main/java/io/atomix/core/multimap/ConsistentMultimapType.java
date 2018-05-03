@@ -20,14 +20,15 @@ import io.atomix.core.multimap.impl.ConsistentSetMultimapService;
 import io.atomix.primitive.PrimitiveManagementService;
 import io.atomix.primitive.PrimitiveType;
 import io.atomix.primitive.service.PrimitiveService;
+import io.atomix.primitive.service.ServiceConfig;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
 /**
  * Consistent multimap primitive type.
  */
-public class ConsistentMultimapType<K, V> implements PrimitiveType<ConsistentMultimapBuilder<K, V>, ConsistentMultimapConfig, ConsistentMultimap<K, V>> {
-  private static final String NAME = "CONSISTENT_MULTIMAP";
+public class ConsistentMultimapType<K, V> implements PrimitiveType<ConsistentMultimapBuilder<K, V>, ConsistentMultimapConfig, ConsistentMultimap<K, V>, ServiceConfig> {
+  private static final String NAME = "consistent-multimap";
 
   /**
    * Returns a new consistent multimap type.
@@ -46,8 +47,8 @@ public class ConsistentMultimapType<K, V> implements PrimitiveType<ConsistentMul
   }
 
   @Override
-  public PrimitiveService newService() {
-    return new ConsistentSetMultimapService();
+  public PrimitiveService newService(ServiceConfig config) {
+    return new ConsistentSetMultimapService(config);
   }
 
   @Override

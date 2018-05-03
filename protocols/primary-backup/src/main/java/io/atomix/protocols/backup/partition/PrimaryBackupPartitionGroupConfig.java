@@ -18,32 +18,25 @@ package io.atomix.protocols.backup.partition;
 import io.atomix.primitive.partition.MemberGroupProvider;
 import io.atomix.primitive.partition.MemberGroupStrategy;
 import io.atomix.primitive.partition.PartitionGroupConfig;
+import io.atomix.primitive.protocol.PrimitiveProtocol;
+import io.atomix.protocols.backup.MultiPrimaryProtocol;
 
 /**
  * Primary-backup partition group configuration.
  */
 public class PrimaryBackupPartitionGroupConfig extends PartitionGroupConfig<PrimaryBackupPartitionGroupConfig> {
-  private int numPartitions;
+  private static final int DEFAULT_PARTITIONS = 71;
+
   private MemberGroupProvider memberGroupProvider = MemberGroupStrategy.NODE_AWARE;
 
-  /**
-   * Returns the number of partitions in the group.
-   *
-   * @return the number of partitions in the group.
-   */
-  public int getNumPartitions() {
-    return numPartitions;
+  @Override
+  public PrimitiveProtocol.Type getType() {
+    return MultiPrimaryProtocol.TYPE;
   }
 
-  /**
-   * Sets the number of partitions in the group.
-   *
-   * @param numPartitions the number of partitions in the group
-   * @return the partition group configuration
-   */
-  public PrimaryBackupPartitionGroupConfig setNumPartitions(int numPartitions) {
-    this.numPartitions = numPartitions;
-    return this;
+  @Override
+  protected int getDefaultPartitions() {
+    return DEFAULT_PARTITIONS;
   }
 
   /**

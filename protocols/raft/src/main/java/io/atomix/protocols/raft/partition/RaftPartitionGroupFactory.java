@@ -15,21 +15,20 @@
  */
 package io.atomix.protocols.raft.partition;
 
-import io.atomix.primitive.PrimitiveProtocol;
+import io.atomix.primitive.partition.PartitionGroup;
 import io.atomix.primitive.partition.PartitionGroupFactory;
-import io.atomix.protocols.raft.RaftProtocol;
 
 /**
  * Raft partition group factory.
  */
 public class RaftPartitionGroupFactory implements PartitionGroupFactory<RaftPartitionGroupConfig, RaftPartitionGroup> {
   @Override
-  public PrimitiveProtocol.Type type() {
-    return RaftProtocol.TYPE;
+  public PartitionGroup.Type type() {
+    return RaftPartitionGroup.TYPE;
   }
 
   @Override
-  public RaftPartitionGroup create(RaftPartitionGroupConfig config) {
+  public RaftPartitionGroup createGroup(RaftPartitionGroupConfig config) {
     return new RaftPartitionGroup(config);
   }
 }

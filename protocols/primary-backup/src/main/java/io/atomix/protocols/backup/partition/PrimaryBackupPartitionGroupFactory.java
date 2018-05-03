@@ -15,21 +15,20 @@
  */
 package io.atomix.protocols.backup.partition;
 
-import io.atomix.primitive.PrimitiveProtocol;
+import io.atomix.primitive.partition.PartitionGroup;
 import io.atomix.primitive.partition.PartitionGroupFactory;
-import io.atomix.protocols.backup.MultiPrimaryProtocol;
 
 /**
  * Primary-backup partition group factory.
  */
 public class PrimaryBackupPartitionGroupFactory implements PartitionGroupFactory<PrimaryBackupPartitionGroupConfig, PrimaryBackupPartitionGroup> {
   @Override
-  public PrimitiveProtocol.Type type() {
-    return MultiPrimaryProtocol.TYPE;
+  public PartitionGroup.Type type() {
+    return PrimaryBackupPartitionGroup.TYPE;
   }
 
   @Override
-  public PrimaryBackupPartitionGroup create(PrimaryBackupPartitionGroupConfig config) {
+  public PrimaryBackupPartitionGroup createGroup(PrimaryBackupPartitionGroupConfig config) {
     return new PrimaryBackupPartitionGroup(config);
   }
 }

@@ -15,8 +15,10 @@
  */
 package io.atomix.primitive.partition;
 
-import io.atomix.utils.ConfigurationException;
 import io.atomix.utils.Services;
+import io.atomix.utils.config.ConfigurationException;
+
+import java.util.Collection;
 
 /**
  * Partition groups.
@@ -33,7 +35,7 @@ public class PartitionGroups {
   public static ManagedPartitionGroup createGroup(PartitionGroupConfig config) {
     for (PartitionGroupFactory factory : Services.loadAll(PartitionGroupFactory.class)) {
       if (factory.configClass().isAssignableFrom(config.getClass())) {
-        return factory.create(config);
+        return factory.createGroup(config);
       }
     }
     throw new ConfigurationException("Unknown partition group configuration type: " + config.getClass().getSimpleName());
@@ -52,6 +54,15 @@ public class PartitionGroups {
       }
     }
     throw new ConfigurationException("Unknown partition group type: " + type);
+  }
+
+  /**
+   * Returns the partition group factories.
+   *
+   * @return the partition group factories
+   */
+  public static Collection<PartitionGroupFactory> getGroupFactories() {
+    return Services.loadAll(PartitionGroupFactory.class);
   }
 
   private PartitionGroups() {

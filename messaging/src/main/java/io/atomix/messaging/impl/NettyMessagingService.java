@@ -30,6 +30,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -94,7 +95,6 @@ import static io.atomix.utils.concurrent.Threads.namedThreads;
  */
 public class NettyMessagingService implements ManagedMessagingService {
   private static final String DEFAULT_NAME = "atomix";
-  public static final int DEFAULT_PORT = 5679;
 
   /**
    * Returns a new Netty messaging service builder.
@@ -139,7 +139,7 @@ public class NettyMessagingService implements ManagedMessagingService {
     @Override
     public ManagedMessagingService build() {
       if (address == null) {
-        address = Address.from(DEFAULT_PORT);
+        address = Address.empty();
       }
       return new NettyMessagingService(name.hashCode(), address);
     }
@@ -185,6 +185,7 @@ public class NettyMessagingService implements ManagedMessagingService {
   private Class<? extends ServerChannel> serverChannelClass;
   private Class<? extends Channel> clientChannelClass;
   private ScheduledExecutorService timeoutExecutor;
+  private Channel serverChannel;
 
   protected static final boolean TLS_ENABLED = true;
   protected static final boolean TLS_DISABLED = false;
@@ -408,11 +409,14 @@ public class NettyMessagingService implements ManagedMessagingService {
     finalFuture.whenComplete((channel, error) -> {
       if (error == null) {
         if (!channel.isActive()) {
-          final CompletableFuture<Channel> currentFuture;
+          CompletableFuture<Channel> currentFuture;
           synchronized (channelPool) {
             currentFuture = channelPool.get(offset);
             if (currentFuture == finalFuture) {
               channelPool.set(offset, null);
+            } else if (currentFuture == null) {
+              currentFuture = openChannel(address);
+              channelPool.set(offset, currentFuture);
             }
           }
 
@@ -592,10 +596,11 @@ public class NettyMessagingService implements ManagedMessagingService {
     }
 
     // Bind and start to accept incoming connections.
-    b.bind(localAddress.port()).addListener(f -> {
+    b.bind(localAddress.port()).addListener((ChannelFutureListener) f -> {
       if (f.isSuccess()) {
         log.info("{} accepting incoming connections on port {}",
             localAddress.address(), localAddress.port());
+        serverChannel = f.channel();
         future.complete(null);
       } else {
         log.warn("{} failed to bind to port {} due to {}",
@@ -625,11 +630,17 @@ public class NettyMessagingService implements ManagedMessagingService {
   @Override
   public CompletableFuture<Void> stop() {
     if (started.get()) {
-      serverGroup.shutdownGracefully();
-      clientGroup.shutdownGracefully();
-      timeoutFuture.cancel(false);
-      timeoutExecutor.shutdown();
-      started.set(false);
+      CompletableFuture<Void> future = new CompletableFuture<>();
+      serverChannel.close().addListener(f -> {
+        serverGroup.shutdownGracefully();
+        clientGroup.shutdownGracefully();
+        timeoutFuture.cancel(false);
+        timeoutExecutor.shutdown();
+        started.set(false);
+        log.info("Stopped");
+        future.complete(null);
+      });
+      return future;
     }
     log.info("Stopped");
     return CompletableFuture.completedFuture(null);

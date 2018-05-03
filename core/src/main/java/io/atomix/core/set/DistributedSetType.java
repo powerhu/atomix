@@ -15,20 +15,22 @@
  */
 package io.atomix.core.set;
 
-import io.atomix.primitive.PrimitiveManagementService;
-import io.atomix.primitive.PrimitiveType;
-import io.atomix.primitive.service.PrimitiveService;
-import io.atomix.core.map.ConsistentMapType;
 import io.atomix.core.map.impl.ConsistentMapService;
 import io.atomix.core.set.impl.DelegatingDistributedSetBuilder;
+import io.atomix.core.set.impl.DistributedSetResource;
+import io.atomix.primitive.PrimitiveManagementService;
+import io.atomix.primitive.PrimitiveType;
+import io.atomix.primitive.resource.PrimitiveResource;
+import io.atomix.primitive.service.PrimitiveService;
+import io.atomix.primitive.service.ServiceConfig;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
 /**
  * Distributed set primitive type.
  */
-public class DistributedSetType<E> implements PrimitiveType<DistributedSetBuilder<E>, DistributedSetConfig, DistributedSet<E>> {
-  private static final String NAME = "SET";
+public class DistributedSetType<E> implements PrimitiveType<DistributedSetBuilder<E>, DistributedSetConfig, DistributedSet<E>, ServiceConfig> {
+  private static final String NAME = "set";
 
   /**
    * Returns a new distributed set type.
@@ -46,8 +48,14 @@ public class DistributedSetType<E> implements PrimitiveType<DistributedSetBuilde
   }
 
   @Override
-  public PrimitiveService newService() {
-    return new ConsistentMapService();
+  public PrimitiveService newService(ServiceConfig config) {
+    return new ConsistentMapService(config);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public PrimitiveResource newResource(DistributedSet<E> primitive) {
+    return new DistributedSetResource((AsyncDistributedSet<String>) primitive.async());
   }
 
   @Override

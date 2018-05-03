@@ -20,9 +20,12 @@ import io.atomix.core.queue.WorkQueueType;
 import io.atomix.core.queue.impl.WorkQueueOperations.Add;
 import io.atomix.core.queue.impl.WorkQueueOperations.Take;
 import io.atomix.primitive.PrimitiveId;
+import io.atomix.primitive.service.ServiceConfig;
 import io.atomix.primitive.service.ServiceContext;
+import io.atomix.primitive.service.impl.DefaultBackupInput;
+import io.atomix.primitive.service.impl.DefaultBackupOutput;
 import io.atomix.primitive.service.impl.DefaultCommit;
-import io.atomix.primitive.session.Session;
+import io.atomix.primitive.session.PrimitiveSession;
 import io.atomix.primitive.session.SessionId;
 import io.atomix.storage.buffer.Buffer;
 import io.atomix.storage.buffer.HeapBuffer;
@@ -50,10 +53,10 @@ public class WorkQueueServiceTest {
     when(context.serviceName()).thenReturn("test");
     when(context.serviceId()).thenReturn(PrimitiveId.from(1));
 
-    Session session = mock(Session.class);
+    PrimitiveSession session = mock(PrimitiveSession.class);
     when(session.sessionId()).thenReturn(SessionId.from(1));
 
-    WorkQueueService service = new WorkQueueService();
+    WorkQueueService service = new WorkQueueService(new ServiceConfig());
     service.init(context);
 
     service.add(new DefaultCommit<>(
@@ -64,11 +67,11 @@ public class WorkQueueServiceTest {
         System.currentTimeMillis()));
 
     Buffer buffer = HeapBuffer.allocate();
-    service.backup(buffer);
+    service.backup(new DefaultBackupOutput(buffer, service.serializer()));
 
-    service = new WorkQueueService();
+    service = new WorkQueueService(new ServiceConfig());
     service.init(context);
-    service.restore(buffer.flip());
+    service.restore(new DefaultBackupInput(buffer.flip(), service.serializer()));
 
     Collection<Task<byte[]>> value = service.take(new DefaultCommit<>(
         2,

@@ -15,35 +15,49 @@
  */
 package io.atomix.core.impl;
 
-import io.atomix.cluster.ClusterService;
-import io.atomix.cluster.messaging.ClusterMessagingService;
+import io.atomix.cluster.ClusterMembershipService;
 import io.atomix.cluster.messaging.ClusterEventingService;
+import io.atomix.cluster.messaging.ClusterMessagingService;
 import io.atomix.primitive.PrimitiveManagementService;
+import io.atomix.primitive.PrimitiveRegistry;
 import io.atomix.primitive.partition.PartitionService;
+
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Default primitive management service.
  */
 public class CorePrimitiveManagementService implements PrimitiveManagementService {
-  private final ClusterService clusterService;
+  private final ScheduledExecutorService executorService;
+  private final ClusterMembershipService membershipService;
   private final ClusterMessagingService communicationService;
   private final ClusterEventingService eventService;
   private final PartitionService partitionService;
+  private final PrimitiveRegistry primitiveRegistry;
 
   public CorePrimitiveManagementService(
-      ClusterService clusterService,
+      ScheduledExecutorService executorService,
+      ClusterMembershipService membershipService,
       ClusterMessagingService communicationService,
       ClusterEventingService eventService,
-      PartitionService partitionService) {
-    this.clusterService = clusterService;
+      PartitionService partitionService,
+      PrimitiveRegistry primitiveRegistry) {
+    this.executorService = executorService;
+    this.membershipService = membershipService;
     this.communicationService = communicationService;
     this.eventService = eventService;
     this.partitionService = partitionService;
+    this.primitiveRegistry = primitiveRegistry;
   }
 
   @Override
-  public ClusterService getClusterService() {
-    return clusterService;
+  public ScheduledExecutorService getExecutorService() {
+    return executorService;
+  }
+
+  @Override
+  public ClusterMembershipService getMembershipService() {
+    return membershipService;
   }
 
   @Override
@@ -59,5 +73,10 @@ public class CorePrimitiveManagementService implements PrimitiveManagementServic
   @Override
   public PartitionService getPartitionService() {
     return partitionService;
+  }
+
+  @Override
+  public PrimitiveRegistry getPrimitiveRegistry() {
+    return primitiveRegistry;
   }
 }

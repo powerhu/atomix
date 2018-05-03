@@ -19,8 +19,8 @@ package io.atomix.primitive.service;
 import io.atomix.primitive.PrimitiveId;
 import io.atomix.primitive.PrimitiveType;
 import io.atomix.primitive.operation.OperationType;
-import io.atomix.primitive.session.Session;
-import io.atomix.primitive.session.Sessions;
+import io.atomix.primitive.session.PrimitiveSession;
+import io.atomix.primitive.session.PrimitiveSessions;
 import io.atomix.utils.time.LogicalClock;
 import io.atomix.utils.time.WallClock;
 
@@ -29,7 +29,7 @@ import io.atomix.utils.time.WallClock;
  * <p>
  * The context is reflective of the current position and state of the Raft state machine. In particular,
  * it exposes the current approximate {@link ServiceContext#wallClock() time} and all open
- * {@link Sessions}.
+ * {@link PrimitiveSessions}.
  */
 public interface ServiceContext {
 
@@ -55,6 +55,14 @@ public interface ServiceContext {
   PrimitiveType serviceType();
 
   /**
+   * Returns the service configuration.
+   *
+   * @param <C> the configuration type
+   * @return the service configuration
+   */
+  <C extends ServiceConfig> C serviceConfig();
+
+  /**
    * Returns the current state machine index.
    * <p>
    * The state index is indicative of the index of the current operation
@@ -70,7 +78,7 @@ public interface ServiceContext {
    *
    * @return the current session
    */
-  Session currentSession();
+  PrimitiveSession currentSession();
 
   /**
    * Returns the current operation type.
@@ -98,6 +106,6 @@ public interface ServiceContext {
    *
    * @return The state machine sessions.
    */
-  Sessions sessions();
+  PrimitiveSessions sessions();
 
 }

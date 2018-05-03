@@ -18,9 +18,10 @@ package io.atomix.protocols.raft.proxy.impl;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import io.atomix.cluster.NodeId;
+import io.atomix.cluster.MemberId;
 import io.atomix.primitive.PrimitiveType;
-import io.atomix.primitive.proxy.PrimitiveProxy;
+import io.atomix.primitive.proxy.PartitionProxy;
+import io.atomix.primitive.service.ServiceConfig;
 import io.atomix.primitive.session.SessionId;
 import io.atomix.protocols.raft.RaftClient;
 import io.atomix.protocols.raft.RaftException;
@@ -39,6 +40,7 @@ import io.atomix.utils.concurrent.ThreadContext;
 import io.atomix.utils.concurrent.ThreadContextFactory;
 import io.atomix.utils.logging.ContextualLoggerFactory;
 import io.atomix.utils.logging.LoggerContext;
+import io.atomix.utils.serializer.Serializer;
 import org.slf4j.Logger;
 
 import java.time.Duration;
@@ -64,7 +66,7 @@ public class RaftProxyManager {
 
   private final Logger log;
   private final String clientId;
-  private final NodeId nodeId;
+  private final MemberId memberId;
   private final RaftClientProtocol protocol;
   private final RaftProxyConnection connection;
   private final ThreadContextFactory threadContextFactory;
@@ -74,9 +76,9 @@ public class RaftProxyManager {
   private final Map<Long, Scheduled> keepAliveTimers = new ConcurrentHashMap<>();
   private final AtomicBoolean open = new AtomicBoolean();
 
-  public RaftProxyManager(String clientId, NodeId nodeId, RaftClientProtocol protocol, MemberSelectorManager selectorManager, ThreadContextFactory threadContextFactory) {
+  public RaftProxyManager(String clientId, MemberId memberId, RaftClientProtocol protocol, MemberSelectorManager selectorManager, ThreadContextFactory threadContextFactory) {
     this.clientId = checkNotNull(clientId, "clientId cannot be null");
-    this.nodeId = checkNotNull(nodeId, "memberId cannot be null");
+    this.memberId = checkNotNull(memberId, "memberId cannot be null");
     this.protocol = checkNotNull(protocol, "protocol cannot be null");
     this.selectorManager = checkNotNull(selectorManager, "selectorManager cannot be null");
     this.threadContext = threadContextFactory.createContext();
@@ -109,7 +111,7 @@ public class RaftProxyManager {
    *
    * @return the current leader
    */
-  public NodeId leader() {
+  public MemberId leader() {
     return selectorManager.leader();
   }
 
@@ -126,7 +128,7 @@ public class RaftProxyManager {
    * @param leader  The leader address.
    * @param servers The collection of servers.
    */
-  public void resetConnections(NodeId leader, Collection<NodeId> servers) {
+  public void resetConnections(MemberId leader, Collection<MemberId> servers) {
     selectorManager.resetAll(leader, servers);
   }
 
@@ -153,6 +155,7 @@ public class RaftProxyManager {
   public CompletableFuture<RaftProxyState> openSession(
       String serviceName,
       PrimitiveType primitiveType,
+      ServiceConfig config,
       ReadConsistency readConsistency,
       CommunicationStrategy communicationStrategy,
       Duration minTimeout,
@@ -164,9 +167,10 @@ public class RaftProxyManager {
 
     log.debug("Opening session; name: {}, type: {}", serviceName, primitiveType);
     OpenSessionRequest request = OpenSessionRequest.builder()
-        .withNodeId(nodeId)
+        .withMemberId(memberId)
         .withServiceName(serviceName)
         .withServiceType(primitiveType)
+        .withServiceConfig(Serializer.using(primitiveType.namespace()).encode(config))
         .withReadConsistency(readConsistency)
         .withMinTimeout(minTimeout.toMillis())
         .withMaxTimeout(maxTimeout.toMillis())
@@ -187,7 +191,7 @@ public class RaftProxyManager {
           sessions.put(state.getSessionId().id(), state);
 
           state.addStateChangeListener(s -> {
-            if (s == PrimitiveProxy.State.CLOSED) {
+            if (s == PartitionProxy.State.CLOSED) {
               sessions.remove(state.getSessionId().id());
             }
           });
@@ -353,9 +357,9 @@ public class RaftProxyManager {
             Set<Long> keptAliveSessions = Sets.newHashSet(Longs.asList(response.sessionIds()));
             for (RaftProxyState session : needKeepAlive) {
               if (keptAliveSessions.contains(session.getSessionId().id())) {
-                session.setState(PrimitiveProxy.State.CONNECTED);
+                session.setState(PartitionProxy.State.CONNECTED);
               } else {
-                session.setState(PrimitiveProxy.State.CLOSED);
+                session.setState(PartitionProxy.State.CLOSED);
               }
             }
             scheduleKeepAlive(System.currentTimeMillis(), sessionTimeout, delta);
@@ -368,7 +372,7 @@ public class RaftProxyManager {
           }
           // If no leader was set, set the session state to unstable and schedule another keep-alive.
           else {
-            needKeepAlive.forEach(s -> s.setState(PrimitiveProxy.State.SUSPENDED));
+            needKeepAlive.forEach(s -> s.setState(PartitionProxy.State.SUSPENDED));
             selectorManager.resetAll();
             scheduleKeepAlive(lastKeepAliveTime, sessionTimeout, delta);
           }
@@ -381,7 +385,7 @@ public class RaftProxyManager {
         }
         // If no leader was set, set the session state to unstable and schedule another keep-alive.
         else {
-          needKeepAlive.forEach(s -> s.setState(PrimitiveProxy.State.SUSPENDED));
+          needKeepAlive.forEach(s -> s.setState(PartitionProxy.State.SUSPENDED));
           selectorManager.resetAll();
           scheduleKeepAlive(lastKeepAliveTime, sessionTimeout, delta);
         }

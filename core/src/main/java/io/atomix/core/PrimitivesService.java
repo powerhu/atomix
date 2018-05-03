@@ -58,10 +58,11 @@ import io.atomix.core.value.AtomicValueType;
 import io.atomix.primitive.DistributedPrimitive;
 import io.atomix.primitive.DistributedPrimitiveBuilder;
 import io.atomix.primitive.PrimitiveConfig;
-import io.atomix.primitive.PrimitiveProtocol;
+import io.atomix.primitive.PrimitiveInfo;
 import io.atomix.primitive.PrimitiveType;
+import io.atomix.primitive.protocol.PrimitiveProtocol;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * Primitives service.
@@ -493,6 +494,15 @@ public interface PrimitivesService {
   <E> WorkQueue<E> getWorkQueue(String name);
 
   /**
+   * Returns a registered primitive.
+   *
+   * @param name the primitive name
+   * @param <P>  the primitive type
+   * @return the primitive instance
+   */
+  <P extends DistributedPrimitive> P getPrimitive(String name);
+
+  /**
    * Returns a cached primitive.
    *
    * @param name            the primitive name
@@ -502,7 +512,10 @@ public interface PrimitivesService {
    * @param <P>             the primitive type
    * @return the primitive instance
    */
-  <C extends PrimitiveConfig<C>, P extends DistributedPrimitive> P getPrimitive(String name, PrimitiveType<?, C, P> primitiveType, C primitiveConfig);
+  <C extends PrimitiveConfig<C>, P extends DistributedPrimitive> P getPrimitive(
+      String name,
+      PrimitiveType<?, C, P, ?> primitiveType,
+      C primitiveConfig);
 
   /**
    * Returns a primitive builder of the given type.
@@ -515,7 +528,7 @@ public interface PrimitivesService {
    */
   <B extends DistributedPrimitiveBuilder<B, C, P>, C extends PrimitiveConfig<C>, P extends DistributedPrimitive> B primitiveBuilder(
       String name,
-      PrimitiveType<B, C, P> primitiveType);
+      PrimitiveType<B, C, P, ?> primitiveType);
 
   /**
    * Returns a primitive builder of the given type.
@@ -529,134 +542,24 @@ public interface PrimitivesService {
    */
   default <B extends DistributedPrimitiveBuilder<B, C, P>, C extends PrimitiveConfig<C>, P extends DistributedPrimitive> B primitiveBuilder(
       String name,
-      PrimitiveType<B, C, P> primitiveType,
+      PrimitiveType<B, C, P, ?> primitiveType,
       PrimitiveProtocol protocol) {
     return primitiveBuilder(name, primitiveType).withProtocol(protocol);
   }
 
   /**
-   * Returns a list of map names.
+   * Returns a collection of open primitives.
    *
-   * @return a list of map names
+   * @return a collection of open primitives
    */
-  default Set<String> getConsistentMapNames() {
-    return getPrimitiveNames(ConsistentMapType.instance());
-  }
+  Collection<PrimitiveInfo> getPrimitives();
 
   /**
-   * Returns a list of document tree names.
+   * Returns a collection of open primitives of the given type.
    *
-   * @return a list of document tree names
+   * @param primitiveType the primitive type
+   * @return a collection of open primitives of the given type
    */
-  default Set<String> getDocumentTreeNames() {
-    return getPrimitiveNames(ConsistentTreeMapType.instance());
-  }
-
-  /**
-   * Returns a list of tree map names.
-   *
-   * @return a list of tree map names
-   */
-  default Set<String> getConsistentTreeMapNames() {
-    return getPrimitiveNames(ConsistentTreeMapType.instance());
-  }
-
-  /**
-   * Returns a list of multimap names.
-   *
-   * @return a list of multimap names
-   */
-  default Set<String> getConsistentMultimapNames() {
-    return getPrimitiveNames(ConsistentMultimapType.instance());
-  }
-
-  /**
-   * Returns a list of counter map names.
-   *
-   * @return a list of counter map names
-   */
-  default Set<String> getAtomicCounterMapNames() {
-    return getPrimitiveNames(AtomicCounterMapType.instance());
-  }
-
-  /**
-   * Returns a list of set names.
-   *
-   * @return a list of set names
-   */
-  default Set<String> getSetNames() {
-    return getPrimitiveNames(DistributedSetType.instance());
-  }
-
-  /**
-   * Returns a list of counter names.
-   *
-   * @return a list of counter names
-   */
-  default Set<String> getAtomicCounterNames() {
-    return getPrimitiveNames(AtomicCounterType.instance());
-  }
-
-  /**
-   * Returns a list of ID generator names.
-   *
-   * @return a list of ID generator names
-   */
-  default Set<String> getAtomicIdGeneratorNames() {
-    return getPrimitiveNames(AtomicIdGeneratorType.instance());
-  }
-
-  /**
-   * Returns a list of atomic value names.
-   *
-   * @return a list of atomic value names
-   */
-  default Set<String> getAtomicValueNames() {
-    return getPrimitiveNames(AtomicValueType.instance());
-  }
-
-  /**
-   * Returns a list of leader election names.
-   *
-   * @return a list of leader election names
-   */
-  default Set<String> getLeaderElectionNames() {
-    return getPrimitiveNames(LeaderElectionType.instance());
-  }
-
-  /**
-   * Returns a list of leader elector names.
-   *
-   * @return a list of leader elector names
-   */
-  default Set<String> getLeaderElectorNames() {
-    return getPrimitiveNames(LeaderElectorType.instance());
-  }
-
-  /**
-   * Returns a list of lock names.
-   *
-   * @return a list of lock names
-   */
-  default Set<String> getDistributedLockNames() {
-    return getPrimitiveNames(DistributedLockType.instance());
-  }
-
-  /**
-   * Returns a list of work queue names.
-   *
-   * @return a list of work queue names
-   */
-  default Set<String> getWorkQueueNames() {
-    return getPrimitiveNames(WorkQueueType.instance());
-  }
-
-  /**
-   * Returns a set of primitive names for the given primitive type.
-   *
-   * @param primitiveType the primitive type for which to return names
-   * @return a set of names of the given primitive type
-   */
-  Set<String> getPrimitiveNames(PrimitiveType primitiveType);
+  Collection<PrimitiveInfo> getPrimitives(PrimitiveType primitiveType);
 
 }

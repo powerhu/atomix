@@ -20,13 +20,16 @@ import io.atomix.core.counter.impl.AtomicCounterOperations.CompareAndSet;
 import io.atomix.core.counter.impl.AtomicCounterOperations.GetAndAdd;
 import io.atomix.core.counter.impl.AtomicCounterOperations.Set;
 import io.atomix.primitive.service.AbstractPrimitiveService;
+import io.atomix.primitive.service.BackupInput;
+import io.atomix.primitive.service.BackupOutput;
 import io.atomix.primitive.service.Commit;
+import io.atomix.primitive.service.ServiceConfig;
 import io.atomix.primitive.service.ServiceExecutor;
-import io.atomix.storage.buffer.BufferInput;
-import io.atomix.storage.buffer.BufferOutput;
 import io.atomix.utils.serializer.KryoNamespace;
 import io.atomix.utils.serializer.KryoNamespaces;
 import io.atomix.utils.serializer.Serializer;
+
+import java.util.Objects;
 
 import static io.atomix.core.counter.impl.AtomicCounterOperations.ADD_AND_GET;
 import static io.atomix.core.counter.impl.AtomicCounterOperations.COMPARE_AND_SET;
@@ -37,8 +40,6 @@ import static io.atomix.core.counter.impl.AtomicCounterOperations.GET_AND_DECREM
 import static io.atomix.core.counter.impl.AtomicCounterOperations.GET_AND_INCREMENT;
 import static io.atomix.core.counter.impl.AtomicCounterOperations.INCREMENT_AND_GET;
 import static io.atomix.core.counter.impl.AtomicCounterOperations.SET;
-
-import java.util.Objects;
 
 /**
  * Atomix long state.
@@ -51,26 +52,35 @@ public class AtomicCounterService extends AbstractPrimitiveService {
 
   private Long value = 0L;
 
-  @Override
-  protected void configure(ServiceExecutor executor) {
-    executor.register(SET, SERIALIZER::decode, this::set);
-    executor.register(GET, this::get, SERIALIZER::encode);
-    executor.register(COMPARE_AND_SET, SERIALIZER::decode, this::compareAndSet, SERIALIZER::encode);
-    executor.register(INCREMENT_AND_GET, this::incrementAndGet, SERIALIZER::encode);
-    executor.register(GET_AND_INCREMENT, this::getAndIncrement, SERIALIZER::encode);
-    executor.register(DECREMENT_AND_GET, this::decrementAndGet, SERIALIZER::encode);
-    executor.register(GET_AND_DECREMENT, this::getAndDecrement, SERIALIZER::encode);
-    executor.register(ADD_AND_GET, SERIALIZER::decode, this::addAndGet, SERIALIZER::encode);
-    executor.register(GET_AND_ADD, SERIALIZER::decode, this::getAndAdd, SERIALIZER::encode);
+  public AtomicCounterService(ServiceConfig config) {
+    super(config);
   }
 
   @Override
-  public void backup(BufferOutput writer) {
+  public Serializer serializer() {
+    return SERIALIZER;
+  }
+
+  @Override
+  protected void configure(ServiceExecutor executor) {
+    executor.register(SET, this::set);
+    executor.register(GET, this::get);
+    executor.register(COMPARE_AND_SET, this::compareAndSet);
+    executor.register(INCREMENT_AND_GET, this::incrementAndGet);
+    executor.register(GET_AND_INCREMENT, this::getAndIncrement);
+    executor.register(DECREMENT_AND_GET, this::decrementAndGet);
+    executor.register(GET_AND_DECREMENT, this::getAndDecrement);
+    executor.register(ADD_AND_GET, this::addAndGet);
+    executor.register(GET_AND_ADD, this::getAndAdd);
+  }
+
+  @Override
+  public void backup(BackupOutput writer) {
     writer.writeLong(value);
   }
 
   @Override
-  public void restore(BufferInput reader) {
+  public void restore(BackupInput reader) {
     value = reader.readLong();
   }
 

@@ -16,13 +16,14 @@
 package io.atomix.utils.concurrent;
 
 import com.google.common.collect.Lists;
-import io.atomix.utils.Match;
+import io.atomix.utils.misc.Match;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Utilities for creating completed and exceptional futures.
@@ -122,6 +123,49 @@ public final class Futures {
    * descendants is blocked on a {@link CompletableFuture#get()} or {@link CompletableFuture#join()} call, completion
    * of the returned future will be done using the provided {@code threadPoolExecutor}.
    *
+   * @param future the future to convert into an asynchronous future
+   * @param orderedExecutor the ordered executor with which to attempt to complete the future
+   * @param threadPoolExecutor the backup executor with which to complete blocked futures
+   * @param <T> future value type
+   * @return a new completable future to be completed using the provided {@code executor} once the provided
+   * {@code future} is complete
+   */
+  public static <T> CompletableFuture<T> orderedFuture(
+      CompletableFuture<T> future,
+      Executor orderedExecutor,
+      Executor threadPoolExecutor) {
+    if (future.isDone()) {
+      return future;
+    }
+
+    BlockingAwareFuture<T> newFuture = new BlockingAwareFuture<>();
+    future.whenComplete((result, error) -> {
+      Runnable completer = () -> {
+        if (future.isCompletedExceptionally()) {
+          newFuture.completeExceptionally(error);
+        } else {
+          newFuture.complete(result);
+        }
+      };
+
+      if (newFuture.isBlocked()) {
+        threadPoolExecutor.execute(completer);
+      } else {
+        orderedExecutor.execute(completer);
+      }
+    });
+    return newFuture;
+  }
+
+  /**
+   * Returns a future that's completed using the given {@code orderedExecutor} if the future is not blocked or the
+   * given {@code threadPoolExecutor} if the future is blocked.
+   * <p>
+   * This method allows futures to maintain single-thread semantics via the provided {@code orderedExecutor} while
+   * ensuring user code can block without blocking completion of futures. When the returned future or any of its
+   * descendants is blocked on a {@link CompletableFuture#get()} or {@link CompletableFuture#join()} call, completion
+   * of the returned future will be done using the provided {@code threadPoolExecutor}.
+   *
    * @param future             the future to convert into an asynchronous future
    * @param executor    the executor with which to attempt to complete the future
    * @param <T>                future value type
@@ -150,6 +194,21 @@ public final class Futures {
       }
     });
     return newFuture;
+  }
+
+  /**
+   * Returns a new CompletableFuture completed with a list of computed values
+   * when all of the given CompletableFuture complete.
+   *
+   * @param futures the CompletableFutures
+   * @param <T> value type of CompletableFuture
+   * @return a new CompletableFuture that is completed when all of the given CompletableFutures complete
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> CompletableFuture<Stream<T>> allOf(Stream<CompletableFuture<T>> futures) {
+    CompletableFuture<T>[] futuresArray = futures.toArray(CompletableFuture[]::new);
+    return CompletableFuture.allOf(futuresArray)
+        .thenApply(v -> Stream.of(futuresArray).map(CompletableFuture::join));
   }
 
   /**

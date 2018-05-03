@@ -16,11 +16,13 @@
 package io.atomix.core.config.jackson;
 
 import io.atomix.core.AtomixConfig;
-import io.atomix.core.config.ConfigProvider;
+import io.atomix.utils.config.ConfigProvider;
+import org.apache.commons.io.IOUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -51,21 +53,41 @@ public class JacksonConfigProviderTest {
 
   @Test
   @Ignore
-  public void testEnv() throws Exception {
+  public void testEnvFile() throws Exception {
     ConfigProvider provider = new JacksonConfigProvider();
     File file = new File(getClass().getClassLoader().getResource("env.yaml").getFile());
     assertTrue(provider.isConfigFile(file));
     AtomixConfig config = provider.load(file, AtomixConfig.class);
-    assertEquals("test", config.getPartitionGroups().iterator().next().getName());
+    assertEquals("test", config.getPartitionGroups().values().iterator().next().getName());
   }
 
   @Test
   @Ignore
-  public void testSystemProperty() throws Exception {
+  public void testEnvString() throws Exception {
+    ConfigProvider provider = new JacksonConfigProvider();
+    File file = new File(getClass().getClassLoader().getResource("env.yaml").getFile());
+    AtomixConfig config = provider.load(IOUtils.toString(file.toURI(), StandardCharsets.UTF_8), AtomixConfig.class);
+    assertEquals("test", config.getPartitionGroups().values().iterator().next().getName());
+    assertEquals(3, config.getPartitionGroups().values().iterator().next().getPartitions());
+  }
+
+  @Test
+  @Ignore
+  public void testSystemPropertyFile() throws Exception {
     ConfigProvider provider = new JacksonConfigProvider();
     File file = new File(getClass().getClassLoader().getResource("sys.yaml").getFile());
     assertTrue(provider.isConfigFile(file));
     AtomixConfig config = provider.load(file, AtomixConfig.class);
-    assertEquals("test", config.getPartitionGroups().iterator().next().getName());
+    assertEquals("test", config.getPartitionGroups().values().iterator().next().getName());
+  }
+
+  @Test
+  @Ignore
+  public void testSystemPropertyString() throws Exception {
+    ConfigProvider provider = new JacksonConfigProvider();
+    File file = new File(getClass().getClassLoader().getResource("sys.yaml").getFile());
+    assertTrue(provider.isConfigFile(file));
+    AtomixConfig config = provider.load(IOUtils.toString(file.toURI(), StandardCharsets.UTF_8), AtomixConfig.class);
+    assertEquals("test", config.getPartitionGroups().values().iterator().next().getName());
   }
 }

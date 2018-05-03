@@ -15,9 +15,11 @@
  */
 package io.atomix.protocols.backup.roles;
 
+import com.google.common.collect.Lists;
 import io.atomix.primitive.operation.OperationType;
+import io.atomix.primitive.service.impl.DefaultBackupOutput;
 import io.atomix.primitive.service.impl.DefaultCommit;
-import io.atomix.primitive.session.Session;
+import io.atomix.primitive.session.PrimitiveSession;
 import io.atomix.protocols.backup.PrimaryBackupServer.Role;
 import io.atomix.protocols.backup.impl.PrimaryBackupSession;
 import io.atomix.protocols.backup.protocol.CloseOperation;
@@ -34,6 +36,7 @@ import io.atomix.utils.concurrent.Futures;
 import io.atomix.utils.concurrent.Scheduled;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -92,7 +95,7 @@ public class PrimaryRole extends PrimaryBackupRole {
         index,
         timestamp,
         session.sessionId().id(),
-        session.nodeId(),
+        session.memberId(),
         request.operation()))
         .thenApply(v -> {
           try {
@@ -113,16 +116,16 @@ public class PrimaryRole extends PrimaryBackupRole {
 
   private CompletableFuture<ExecuteResponse> executeQuery(ExecuteRequest request) {
     // If the session doesn't exist, create and replicate a new session before applying the query.
-    Session session = context.getSession(request.session());
+    PrimitiveSession session = context.getSession(request.session());
     if (session == null) {
-      Session newSession = context.createSession(request.session(), request.node());
+      PrimitiveSession newSession = context.createSession(request.session(), request.node());
       long index = context.nextIndex();
       long timestamp = System.currentTimeMillis();
       return replicator.replicate(new ExecuteOperation(
           index,
           timestamp,
           newSession.sessionId().id(),
-          newSession.nodeId(),
+          newSession.memberId(),
           null))
           .thenApply(v -> {
             context.setIndex(index);
@@ -134,7 +137,7 @@ public class PrimaryRole extends PrimaryBackupRole {
     }
   }
 
-  private ExecuteResponse applyQuery(ExecuteRequest request, Session session) {
+  private ExecuteResponse applyQuery(ExecuteRequest request, PrimitiveSession session) {
     try {
       byte[] result = context.service().apply(new DefaultCommit<>(
           context.getIndex(),
@@ -158,7 +161,14 @@ public class PrimaryRole extends PrimaryBackupRole {
     }
 
     HeapBuffer buffer = HeapBuffer.allocate();
-    context.service().backup(buffer);
+    List<PrimitiveSession> sessions = Lists.newArrayList(context.sessions());
+    buffer.writeInt(sessions.size());
+    for (PrimitiveSession session : sessions) {
+      buffer.writeLong(session.sessionId().id());
+      buffer.writeString(session.memberId().id());
+    }
+
+    context.service().backup(new DefaultBackupOutput(buffer, context.service().serializer()));
     buffer.flip();
     byte[] bytes = buffer.readBytes(buffer.remaining());
     return CompletableFuture.completedFuture(

@@ -15,9 +15,10 @@
  */
 package io.atomix.protocols.backup.roles;
 
-import io.atomix.cluster.NodeId;
+import io.atomix.cluster.MemberId;
+import io.atomix.primitive.service.impl.DefaultBackupInput;
 import io.atomix.primitive.service.impl.DefaultCommit;
-import io.atomix.primitive.session.Session;
+import io.atomix.primitive.session.PrimitiveSession;
 import io.atomix.protocols.backup.PrimaryBackupServer.Role;
 import io.atomix.protocols.backup.impl.PrimaryBackupSession;
 import io.atomix.protocols.backup.protocol.BackupOperation;
@@ -27,8 +28,10 @@ import io.atomix.protocols.backup.protocol.CloseOperation;
 import io.atomix.protocols.backup.protocol.ExecuteOperation;
 import io.atomix.protocols.backup.protocol.ExpireOperation;
 import io.atomix.protocols.backup.protocol.HeartbeatOperation;
+import io.atomix.protocols.backup.protocol.PrimaryBackupResponse;
 import io.atomix.protocols.backup.protocol.RestoreRequest;
 import io.atomix.protocols.backup.service.impl.PrimaryBackupServiceContext;
+import io.atomix.storage.buffer.Buffer;
 import io.atomix.storage.buffer.HeapBuffer;
 
 import java.util.LinkedList;
@@ -91,6 +94,9 @@ public class BackupRole extends PrimaryBackupRole {
             applyClose((CloseOperation) operation);
             break;
         }
+
+      } else if (operation.index() < i) {
+        continue;
       } else {
         requestRestore(context.primary());
         break;
@@ -102,7 +108,7 @@ public class BackupRole extends PrimaryBackupRole {
    * Applies an execute operation to the service.
    */
   private void applyExecute(ExecuteOperation operation) {
-    Session session = context.getOrCreateSession(operation.session(), operation.node());
+    PrimitiveSession session = context.getOrCreateSession(operation.session(), operation.node());
     if (operation.operation() != null) {
       try {
         context.service().apply(new DefaultCommit<>(
@@ -151,12 +157,19 @@ public class BackupRole extends PrimaryBackupRole {
   /**
    * Requests a restore from the primary.
    */
-  private void requestRestore(NodeId primary) {
+  private void requestRestore(MemberId primary) {
     context.protocol().restore(primary, RestoreRequest.request(context.descriptor(), context.currentTerm()))
         .whenCompleteAsync((response, error) -> {
-          if (error == null) {
+          if (error == null && response.status() == PrimaryBackupResponse.Status.OK) {
             context.resetIndex(response.index(), response.timestamp());
-            context.service().restore(HeapBuffer.wrap(response.data()));
+
+            Buffer buffer = HeapBuffer.wrap(response.data());
+            int sessions = buffer.readInt();
+            for (int i = 0; i < sessions; i++) {
+              context.getOrCreateSession(buffer.readLong(), MemberId.from(buffer.readString()));
+            }
+
+            context.service().restore(new DefaultBackupInput(buffer, context.service().serializer()));
             operations.clear();
           }
         }, context.threadContext());

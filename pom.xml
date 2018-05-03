@@ -54,8 +54,10 @@
     <commons.math3.version>3.6.1</commons.math3.version>
     <netty.version>4.1.22.Final</netty.version>
     <vertx.version>3.5.0</vertx.version>
+    <jaxrs.version>2.0</jaxrs.version>
     <jackson.version>2.9.5</jackson.version>
     <resteasy.version>3.1.4.Final</resteasy.version>
+    <rest-assured.version>3.0.7</rest-assured.version>
     <argparse4j.version>0.7.0</argparse4j.version>
 
     <!-- Maven plugins -->
@@ -224,19 +226,21 @@
           <doctitle>Atomix API Reference (${jv})</doctitle>
           <windowtitle>Atomix API Reference (${jv})</windowtitle>
           <aggregate>true</aggregate>
-          <excludePackageNames>io.atomix.examples*:*.impl*</excludePackageNames>
+          <stylesheetfile>${basedir}/docs/style.css</stylesheetfile>
+          <excludePackageNames>*.impl*:io.atomix.core.config.jackson:io.atomix.core.utils:io.atomix.rest*:io.atomix.agent*:io.atomix.storage.buffer:io.atomix.storage.journal*:io.atomix.storage.statistics:io.atomix.protocols.raft.utils:io.atomix.utils.serializer.serializers:io.atomix.utils.concurrent:io.atomix.utils.logging:io.atomix.utils.misc:io.atomix.utils.memory:io.atomix.protocols.raft.roles:io.atomix.protocols.raft.protocol:io.atomix.protocols.raft.storage:io.atomix.protocols.raft.cluster:io.atomix.protocols.raft.test:io.atomix.protocols.backup.roles:io.atomix.protocols.backup.protocol
+          </excludePackageNames>
           <additionalparam>
             -Xdoclint:none
             -notimestamp
             -link http://docs.oracle.com/javase/8/docs/api/
-            -group "Atomix core" io.atomix
-            -group "Cluster" io.atomix.cluster*
+            -group "Core" io.atomix.core*
+            -group "Primitives" io.atomix.core.counter:io.atomix.core.election:io.atomix.core.generator:io.atomix.core.lock:io.atomix.core.map:io.atomix.core.multimap:io.atomix.core.queue:io.atomix.core.set:io.atomix.core.transaction:io.atomix.core.tree:io.atomix.core.value
+            -group "Cluster Management" io.atomix.cluster*:io.atomix.messaging*:io.atomix.cluster.messaging*
+            -group "Primitive API" io.atomix.primitive*
+            -group "Raft Protocol" io.atomix.protocols.raft*
+            -group "Primary-Backup Protocol" io.atomix.protocols.backup*
             -group "Storage" io.atomix.storage*
-            -group "Time" io.atomix.time*
-            -group "Distributed primitives" io.atomix.primitives*
-            -group "Raft protocol" io.atomix.protocols.raft*
-            -group "Gossip protocol" io.atomix.protocols.gossip*
-            -group "Utilities" io.atomix.logging:io.atomix.serializer*:io.atomix.time:io.atomix.storage:io.atomix.buffer
+            -group "Utilities" io.atomix.utils*
           </additionalparam>
         </configuration>
       </plugin>

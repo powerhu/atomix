@@ -16,19 +16,19 @@
 package io.atomix.core.transaction;
 
 import io.atomix.core.impl.CoreTransactionService;
-import io.atomix.core.map.impl.ConsistentTreeMapService;
 import io.atomix.core.transaction.impl.DefaultTransactionBuilder;
 import io.atomix.primitive.PrimitiveManagementService;
 import io.atomix.primitive.PrimitiveType;
 import io.atomix.primitive.service.PrimitiveService;
+import io.atomix.primitive.service.ServiceConfig;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
 /**
  * Transaction primitive type.
  */
-public class TransactionType implements PrimitiveType<TransactionBuilder, TransactionConfig, Transaction> {
-  private static final String NAME = "TRANSACTION";
+public class TransactionType implements PrimitiveType<TransactionBuilder, TransactionConfig, Transaction, ServiceConfig> {
+  private static final String NAME = "transaction";
   private static final TransactionType INSTANCE = new TransactionType();
 
   /**
@@ -46,8 +46,8 @@ public class TransactionType implements PrimitiveType<TransactionBuilder, Transa
   }
 
   @Override
-  public PrimitiveService newService() {
-    return new ConsistentTreeMapService();
+  public PrimitiveService newService(ServiceConfig config) {
+    throw new UnsupportedOperationException();
   }
 
   @Override

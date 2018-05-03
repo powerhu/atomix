@@ -15,6 +15,7 @@
  */
 package io.atomix.primitive;
 
+import io.atomix.primitive.protocol.PrimitiveProtocolConfig;
 import io.atomix.utils.serializer.SerializerConfig;
 
 /**
@@ -23,11 +24,25 @@ import io.atomix.utils.serializer.SerializerConfig;
 public abstract class PrimitiveConfig<C extends PrimitiveConfig<C>> {
   private static final int DEFAULT_CACHE_SIZE = 1000;
 
+  private final PrimitiveType primitiveType;
   private SerializerConfig serializerConfig;
   private PrimitiveProtocolConfig protocolConfig;
   private boolean cacheEnabled = false;
   private int cacheSize = DEFAULT_CACHE_SIZE;
   private boolean readOnly = false;
+
+  protected PrimitiveConfig(PrimitiveType primitiveType) {
+    this.primitiveType = primitiveType;
+  }
+
+  /**
+   * Returns the primitive type.
+   *
+   * @return the primitive type
+   */
+  public PrimitiveType getType() {
+    return primitiveType;
+  }
 
   /**
    * Returns the serializer configuration.
@@ -44,9 +59,10 @@ public abstract class PrimitiveConfig<C extends PrimitiveConfig<C>> {
    * @param serializerConfig the serializer configuration
    * @return the primitive configuration
    */
-  public PrimitiveConfig setSerializerConfig(SerializerConfig serializerConfig) {
+  @SuppressWarnings("unchecked")
+  public C setSerializerConfig(SerializerConfig serializerConfig) {
     this.serializerConfig = serializerConfig;
-    return this;
+    return (C) this;
   }
 
   /**
@@ -64,9 +80,10 @@ public abstract class PrimitiveConfig<C extends PrimitiveConfig<C>> {
    * @param protocolConfig the protocol configuration
    * @return the primitive configuration
    */
-  public PrimitiveConfig setProtocolConfig(PrimitiveProtocolConfig protocolConfig) {
+  @SuppressWarnings("unchecked")
+  public C setProtocolConfig(PrimitiveProtocolConfig protocolConfig) {
     this.protocolConfig = protocolConfig;
-    return this;
+    return (C) this;
   }
 
   /**

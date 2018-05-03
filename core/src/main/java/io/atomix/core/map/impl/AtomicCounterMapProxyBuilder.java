@@ -20,7 +20,8 @@ import io.atomix.core.map.AtomicCounterMap;
 import io.atomix.core.map.AtomicCounterMapBuilder;
 import io.atomix.core.map.AtomicCounterMapConfig;
 import io.atomix.primitive.PrimitiveManagementService;
-import io.atomix.primitive.PrimitiveProtocol;
+import io.atomix.primitive.proxy.PrimitiveProxy;
+import io.atomix.primitive.service.ServiceConfig;
 import io.atomix.utils.serializer.Serializer;
 
 import java.util.concurrent.CompletableFuture;
@@ -36,18 +37,17 @@ public class AtomicCounterMapProxyBuilder<K> extends AtomicCounterMapBuilder<K> 
   @Override
   @SuppressWarnings("unchecked")
   public CompletableFuture<AtomicCounterMap<K>> buildAsync() {
-    PrimitiveProtocol protocol = protocol();
-    return managementService.getPartitionService()
-        .getPartitionGroup(protocol)
-        .getPartition(name())
-        .getPrimitiveClient()
-        .newProxy(name(), primitiveType(), protocol)
+    PrimitiveProxy proxy = protocol().newProxy(
+        name(),
+        primitiveType(),
+        new ServiceConfig(),
+        managementService.getPartitionService());
+    return new AtomicCounterMapProxy(proxy, managementService.getPrimitiveRegistry())
         .connect()
-        .thenApply(proxy -> {
-          AtomicCounterMapProxy rawMap = new AtomicCounterMapProxy(proxy);
+        .thenApply(map -> {
           Serializer serializer = serializer();
           return new TranscodingAsyncAtomicCounterMap<K, String>(
-              rawMap,
+              map,
               key -> BaseEncoding.base16().encode(serializer.encode(key)),
               string -> serializer.decode(BaseEncoding.base16().decode(string)))
               .sync();

@@ -16,18 +16,21 @@
 package io.atomix.core.counter;
 
 import io.atomix.core.counter.impl.AtomicCounterProxyBuilder;
+import io.atomix.core.counter.impl.AtomicCounterResource;
 import io.atomix.core.counter.impl.AtomicCounterService;
 import io.atomix.primitive.PrimitiveManagementService;
 import io.atomix.primitive.PrimitiveType;
+import io.atomix.primitive.resource.PrimitiveResource;
 import io.atomix.primitive.service.PrimitiveService;
+import io.atomix.primitive.service.ServiceConfig;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
 /**
  * Atomic counter primitive type.
  */
-public class AtomicCounterType implements PrimitiveType<AtomicCounterBuilder, AtomicCounterConfig, AtomicCounter> {
-  private static final String NAME = "COUNTER";
+public class AtomicCounterType implements PrimitiveType<AtomicCounterBuilder, AtomicCounterConfig, AtomicCounter, ServiceConfig> {
+  private static final String NAME = "counter";
 
   /**
    * Returns a new atomic counter type.
@@ -44,8 +47,13 @@ public class AtomicCounterType implements PrimitiveType<AtomicCounterBuilder, At
   }
 
   @Override
-  public PrimitiveService newService() {
-    return new AtomicCounterService();
+  public PrimitiveService newService(ServiceConfig config) {
+    return new AtomicCounterService(config);
+  }
+
+  @Override
+  public PrimitiveResource newResource(AtomicCounter primitive) {
+    return new AtomicCounterResource(primitive.async());
   }
 
   @Override

@@ -15,7 +15,6 @@
  */
 package io.atomix.primitive.partition;
 
-import io.atomix.primitive.PrimitiveProtocol;
 import io.atomix.utils.Generics;
 
 /**
@@ -28,7 +27,7 @@ public interface PartitionGroupFactory<C extends PartitionGroupConfig<C>, P exte
    *
    * @return the partition group protocol type
    */
-  PrimitiveProtocol.Type type();
+  PartitionGroup.Type type();
 
   /**
    * Returns the partition group configuration class.
@@ -56,6 +55,6 @@ public interface PartitionGroupFactory<C extends PartitionGroupConfig<C>, P exte
    * @param config the partition group configuration
    * @return the partition group
    */
-  P create(C config);
+  P createGroup(C config);
 
 }
